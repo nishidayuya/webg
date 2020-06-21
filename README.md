@@ -1,35 +1,29 @@
-# Webg
+# webg: A downloader to get web page with JavaScript
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/webg`. To experiment with that code, run `bin/console` for an interactive prompt.
+## Requirements
 
-TODO: Delete this and the text above, and describe your gem
+- Ruby
+- Firefox
+- Firefox WebDriver support
 
 ## Installation
 
-Add this line to your application's Gemfile:
-
 ```ruby
-gem 'webg'
+$ gem install webg
 ```
-
-And then execute:
-
-    $ bundle install
-
-Or install it yourself as:
-
-    $ gem install webg
 
 ## Usage
 
-TODO: Write usage instructions here
+```sh
+$ webg [options] uri
+```
 
-## Development
+For example: fetch 'webg' page titles by google
 
-After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
-
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```sh
+$ webg --text --css-selector='h3.LC20lb' 'https://www.google.com/search?q=webg'
+```
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/webg.
+Bug reports and pull requests are welcome on GitHub at https://github.com/nishidayuya/webg

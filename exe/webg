@@ -1,3 +1,96 @@
 #!/usr/bin/env ruby
 
-require "webg"
+require "optparse"
+require "uri"
+
+require "capybara"
+
+require "webg/version"
+
+class Selector
+  def raw(session)
+    raise NotImplementedError, "sub class must override."
+  end
+
+  def text(session)
+    raise NotImplementedError, "sub class must override."
+  end
+end
+
+class Selector::All < Selector
+  def raw(session)
+    return session.body
+  end
+
+  def text(session)
+    return session.text.chomp
+  end
+end
+
+class Selector::Css < Selector
+  def initialize(css_selectors)
+    @css_selectors = css_selectors
+  end
+
+  def raw(session)
+    return nodes(session).map { |node|
+      node.evaluate_script('this.outerHTML')
+    }.join("\n")
+  end
+
+  def text(session)
+    return nodes(session).map(&:text).join("\n")
+  end
+
+  private
+
+  def nodes(session)
+    return session.all(@css_selectors.join(", "))
+  end
+end
+
+def parse_options(argv)
+  argv = argv.dup
+  text = false
+  css_selectors = []
+
+  parser = OptionParser.new
+  parser.version = Webg::VERSION
+  parser.banner = "Usage: #{File.basename(Process.argv0)} [options] uri"
+  parser.separator("")
+  parser.separator("Options:")
+  parser.on(
+    "--css-selector=SELECTOR",
+    "specify css selector to filter output.",
+  ) do |selector|
+    css_selectors << selector
+  end
+  parser.on(
+    "--text",
+    "output only text",
+  ) do
+    text = true
+  end
+  parser.parse!(argv)
+
+  uri = argv.shift
+  if !uri
+    $stderr.puts(parser.help)
+    exit(1)
+  end
+  uri = URI(uri)
+
+  return uri, text, css_selectors
+end
+
+begin
+  uri, text, css_selectors = parse_options(ARGV)
+  session = Capybara::Session.new(:selenium_headless)
+  session.visit(uri)
+  selector = css_selectors.empty? ? Selector::All.new : Selector::Css.new(css_selectors)
+  output_method_name = text ? :text : :raw
+  puts(selector.public_send(output_method_name, session))
+rescue => e
+  $stderr.puts(e.message)
+  exit(1)
+end
