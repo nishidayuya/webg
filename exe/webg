@@ -7,17 +7,11 @@ require "capybara"
 
 require "webg/version"
 
-class Selector
-  def raw(session)
-    raise NotImplementedError, "sub class must override."
-  end
 
-  def text(session)
-    raise NotImplementedError, "sub class must override."
-  end
+module Selector
 end
 
-class Selector::All < Selector
+class Selector::All
   def raw(session)
     return session.body
   end
@@ -27,7 +21,7 @@ class Selector::All < Selector
   end
 end
 
-class Selector::Css < Selector
+class Selector::Css
   def initialize(css_selectors)
     @css_selectors = css_selectors
   end
