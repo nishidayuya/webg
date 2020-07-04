@@ -3,21 +3,42 @@
 require "optparse"
 require "uri"
 
-require "capybara"
+require "nokogiri"
 
 require "webg/version"
 
+module Fetcher
+end
+
+class Fetcher::Raw
+  def call(uri)
+    require("open-uri")
+    return uri.read
+  end
+end
+
+class Fetcher::Firefox
+  def call(uri)
+    require("capybara")
+    session = Capybara::Session.new(:selenium_headless)
+    session.visit(uri)
+    return session.body
+  end
+end
 
 module Selector
 end
 
 class Selector::All
-  def raw(session)
-    return session.body
+  REJECT_TAG_NAMES = %w[script noscript style]
+
+  def raw(document)
+    return document.to_s
   end
 
-  def text(session)
-    return session.text.chomp
+  def text(document)
+    document.css(REJECT_TAG_NAMES.join(", ")).remove
+    return document.inner_text
   end
 end
 
@@ -26,7 +47,7 @@ class Selector::Css
     @css_selectors = css_selectors
   end
 
-  def raw(session)
+  def raw(document)
     return nodes(session).map { |node|
       node.evaluate_script('this.outerHTML')
     }.join("\n")
@@ -45,6 +66,7 @@ end
 
 def parse_options(argv)
   argv = argv.dup
+  fetcher = :raw
   css_selectors = []
   text = false
 
@@ -53,6 +75,12 @@ def parse_options(argv)
   parser.banner = "Usage: #{File.basename(Process.argv0)} [options] uri"
   parser.separator("")
   parser.separator("Options:")
+  parser.on(
+    "--firefox",
+    "use Firefox to fetch web page. slow, but JavaScript-evaluatable",
+  ) do
+    fetcher = :firefox
+  end
   parser.on(
     "--css-selector=SELECTOR",
     "specify css selector to filter output.",
@@ -74,16 +102,18 @@ def parse_options(argv)
   end
   uri = URI(uri)
 
-  return uri, css_selectors, text
+  return uri, fetcher, css_selectors, text
 end
 
 begin
-  uri, css_selectors, text = parse_options(ARGV)
-  session = Capybara::Session.new(:selenium_headless)
-  session.visit(uri)
+  uri, fetcher_name, css_selectors, text = parse_options(ARGV)
+
+  fetcher = Fetcher.const_get(fetcher_name.capitalize).new
   selector = css_selectors.empty? ? Selector::All.new : Selector::Css.new(css_selectors)
   output_method_name = text ? :text : :raw
-  puts(selector.public_send(output_method_name, session))
+
+  document = Nokogiri::HTML.parse(fetcher.(uri))
+  puts(selector.public_send(output_method_name, document))
 rescue => e
   $stderr.puts(e.message)
   exit(1)
