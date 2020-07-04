@@ -45,8 +45,8 @@ end
 
 def parse_options(argv)
   argv = argv.dup
-  text = false
   css_selectors = []
+  text = false
 
   parser = OptionParser.new
   parser.version = Webg::VERSION
@@ -74,11 +74,11 @@ def parse_options(argv)
   end
   uri = URI(uri)
 
-  return uri, text, css_selectors
+  return uri, css_selectors, text
 end
 
 begin
-  uri, text, css_selectors = parse_options(ARGV)
+  uri, css_selectors, text = parse_options(ARGV)
   session = Capybara::Session.new(:selenium_headless)
   session.visit(uri)
   selector = css_selectors.empty? ? Selector::All.new : Selector::Css.new(css_selectors)
