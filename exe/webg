@@ -48,19 +48,17 @@ class Selector::Css
   end
 
   def raw(document)
-    return nodes(session).map { |node|
-      node.evaluate_script('this.outerHTML')
-    }.join("\n")
+    return process(document, :to_s)
   end
 
-  def text(session)
-    return nodes(session).map(&:text).join("\n")
+  def text(document)
+    return process(document, :text)
   end
 
   private
 
-  def nodes(session)
-    return session.all(@css_selectors.join(", "))
+  def process(document, method)
+    return document.css(@css_selectors.join(", ")).map(&method).join("\n")
   end
 end
 
