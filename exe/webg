@@ -11,13 +11,24 @@ module Fetcher
 end
 
 class Fetcher::Raw
+  DEFAULT_USER_AGENT = "webg/#{Webg::VERSION}"
+
+  def initialize(headers)
+    @headers = headers
+  end
+
   def call(uri)
     require("open-uri")
-    return uri.read
+    return uri.read({"User-Agent" => DEFAULT_USER_AGENT}.merge(@headers))
   end
 end
 
 class Fetcher::Firefox
+  def initialize(headers)
+    return if headers.empty?
+    raise "specifying headers on Firefox is not supported"
+  end
+
   def call(uri)
     require("capybara")
     session = Capybara::Session.new(:selenium_headless)
@@ -65,6 +76,7 @@ end
 def parse_options(argv)
   argv = argv.dup
   fetcher = :raw
+  headers = {}
   css_selectors = []
   text = false
 
@@ -78,6 +90,26 @@ def parse_options(argv)
     "use Firefox to fetch web page. slow, but JavaScript-evaluatable",
   ) do
     fetcher = :firefox
+  end
+  parser.on(
+    "--user-agent=USER-AGENT",
+    "specify User-Agent header",
+  ) do |ua|
+    headers["User-Agent"] = ua
+  end
+  parser.on(
+    "--referer=REFERER",
+    "specify Referer header",
+  ) do |referer|
+    headers["Referer"] = referer
+  end
+  parser.on(
+    "--header=HEADER-LINE",
+    "specify various headers in HTTP request. e.g: --header='Accept-Language: ja'"
+  ) do |header_line|
+    md = /:\s+/.match(header_line)
+    raise "cannot parse header-line(#{header_line})" if !md
+    headers[md.pre_match] = md.post_match
   end
   parser.on(
     "--css-selector=SELECTOR",
@@ -100,13 +132,13 @@ def parse_options(argv)
   end
   uri = URI(uri)
 
-  return uri, fetcher, css_selectors, text
+  return uri, fetcher, headers, css_selectors, text
 end
 
 begin
-  uri, fetcher_name, css_selectors, text = parse_options(ARGV)
+  uri, fetcher_name, headers, css_selectors, text = parse_options(ARGV)
 
-  fetcher = Fetcher.const_get(fetcher_name.capitalize).new
+  fetcher = Fetcher.const_get(fetcher_name.capitalize).new(headers)
   selector = css_selectors.empty? ? Selector::All.new : Selector::Css.new(css_selectors)
   output_method_name = text ? :text : :raw
 
