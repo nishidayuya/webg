@@ -78,7 +78,7 @@ def parse_options(argv)
   fetcher = :raw
   headers = {}
   css_selectors = []
-  text = false
+  output_method_name = :raw
 
   parser = OptionParser.new
   parser.version = Webg::VERSION
@@ -121,7 +121,7 @@ def parse_options(argv)
     "--text",
     "output only text",
   ) do
-    text = true
+    output_method_name = :text
   end
   parser.parse!(argv)
 
@@ -132,15 +132,14 @@ def parse_options(argv)
   end
   uri = URI(uri)
 
-  return uri, fetcher, headers, css_selectors, text
+  return uri, fetcher, headers, css_selectors, output_method_name
 end
 
 begin
-  uri, fetcher_name, headers, css_selectors, text = parse_options(ARGV)
+  uri, fetcher_name, headers, css_selectors, output_method_name = parse_options(ARGV)
 
   fetcher = Fetcher.const_get(fetcher_name.capitalize).new(headers)
   selector = css_selectors.empty? ? Selector::All.new : Selector::Css.new(css_selectors)
-  output_method_name = text ? :text : :raw
 
   document = Nokogiri::HTML.parse(fetcher.(uri))
   puts(selector.public_send(output_method_name, document))
