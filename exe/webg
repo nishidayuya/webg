@@ -7,6 +7,14 @@ require "nokogiri"
 
 require "webg/version"
 
+module Squeezable
+  def squeezed_text(document)
+    return text(document).each_line.map { |l|
+      l.gsub(/\p{Space}+/, " ").strip
+    }.join("\n").strip.gsub(/\n{3,}/, "\n\n")
+  end
+end
+
 module Fetcher
 end
 
@@ -41,6 +49,8 @@ module Selector
 end
 
 class Selector::All
+  include Squeezable
+
   REJECT_TAG_NAMES = %w[script noscript style]
 
   def raw(document)
@@ -54,6 +64,8 @@ class Selector::All
 end
 
 class Selector::Css
+  include Squeezable
+
   def initialize(css_selectors)
     @css_selectors = css_selectors
   end
@@ -122,6 +134,12 @@ def parse_options(argv)
     "output only text",
   ) do
     output_method_name = :text
+  end
+  parser.on(
+    "--squeezed-text",
+    "output text with squeezing white spaces",
+  ) do
+    output_method_name = :squeezed_text
   end
   parser.parse!(argv)
 
