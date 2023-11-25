@@ -31,6 +31,15 @@ class Fetcher::Raw
   end
 end
 
+class Fetcher::Stdin
+  def initialize(_headers)
+  end
+
+  def call(_uri)
+    return $stdin
+  end
+end
+
 class Fetcher::Firefox
   def initialize(headers)
     return if headers.empty?
@@ -143,12 +152,12 @@ def parse_options(argv)
   end
   parser.parse!(argv)
 
-  uri = argv.shift
-  if !uri
-    $stderr.puts(parser.help)
-    exit(1)
+  s_uri = argv.shift
+  if s_uri
+    uri = URI(s_uri)
+  else
+    fetcher = :stdin
   end
-  uri = URI(uri)
 
   return uri, fetcher, headers, css_selectors, output_method_name
 end
